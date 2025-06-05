@@ -1,9 +1,11 @@
+
 export interface ImageData {
   id: string;
   name: string;
   originalFile: File;
   dataUrl: string;
   qualityScore?: number;
+  isBlurry?: boolean;
   isHighQuality?: boolean;
   error?: string;
 }
@@ -23,6 +25,9 @@ export interface SightengineResponse {
     operations: number;
   };
   quality?: {
+    score: number;
+  };
+  blur?: {
     score: number;
   };
   media?: {
