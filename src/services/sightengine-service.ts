@@ -37,8 +37,12 @@ export const processImagesWithSightengine = async (
         dataUrl: await fileToDataUrl(file),
       };
 
+      console.log(`Processing image: ${file.name}`);
+      
       // Call Sightengine API for quality assessment only
       const qualityScore = await assessImageQuality(file);
+      console.log(`Quality score for ${file.name}: ${qualityScore}`);
+      
       imageData.qualityScore = qualityScore;
       
       // Image is high quality if score >= 0.8
@@ -61,7 +65,7 @@ export const processImagesWithSightengine = async (
     }
 
     // Small delay to prevent API rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   onProgressUpdate({
@@ -75,28 +79,40 @@ export const processImagesWithSightengine = async (
 };
 
 const assessImageQuality = async (file: File): Promise<number> => {
+  console.log('Calling Sightengine API for quality assessment...');
+  
   const formData = new FormData();
   formData.append('media', file);
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
 
+  console.log('FormData prepared, making API call...');
+
   const response = await fetch('https://api.sightengine.com/1.0/check.json', {
     method: 'POST',
     body: formData,
   });
 
+  console.log('API response status:', response.status);
+
   if (!response.ok) {
-    throw new Error(`Sightengine API error: ${response.status}`);
+    console.error('API response not ok:', response.status, response.statusText);
+    throw new Error(`Sightengine API error: ${response.status} ${response.statusText}`);
   }
 
   const data: SightengineResponse = await response.json();
+  console.log('API response data:', data);
   
   if (data.status !== 'success') {
-    throw new Error('Sightengine API returned error status');
+    console.error('API returned error status:', data);
+    throw new Error(`Sightengine API returned error status: ${data.status}`);
   }
 
-  return data.quality?.score ?? 0;
+  const qualityScore = data.quality?.score ?? 0;
+  console.log('Extracted quality score:', qualityScore);
+  
+  return qualityScore;
 };
 
 const fileToDataUrl = (file: File): Promise<string> => {

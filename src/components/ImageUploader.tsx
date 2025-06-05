@@ -1,7 +1,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileImage, Archive } from 'lucide-react';
+import { Upload, FileImage, Archive, TestTube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +55,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         variant: "destructive",
       });
     } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const testWithSampleImage = async () => {
+    setIsProcessing(true);
+    
+    try {
+      // Fetch a sample image from the internet for testing
+      const response = await fetch('https://picsum.photos/800/600');
+      const blob = await response.blob();
+      const file = new File([blob], 'test-image.jpg', { type: 'image/jpeg' });
+      
+      console.log('Testing with sample image:', file.name);
+      await processFiles([file]);
+    } catch (error) {
+      console.error('Test failed:', error);
+      toast({
+        title: "Test failed",
+        description: "Could not fetch test image. Please try with your own images.",
+        variant: "destructive",
+      });
       setIsProcessing(false);
     }
   };
@@ -161,6 +183,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             >
               <Archive className="h-5 w-5" />
               Upload ZIP File
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={isProcessing}
+              onClick={testWithSampleImage}
+            >
+              <TestTube className="h-5 w-5" />
+              Test with Sample Image
             </Button>
           </div>
         </CardContent>
