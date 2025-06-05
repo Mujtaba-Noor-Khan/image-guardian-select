@@ -41,7 +41,7 @@ const Index = () => {
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Upload your images and let AI assess their technical quality. 
-            Only high-quality images (score ≥ 0.8) will be marked as high quality.
+            Only high-quality images (score ≥ 0.8 and not blurry) will be returned.
           </p>
         </div>
 

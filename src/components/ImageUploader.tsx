@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileImage, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageData, ProcessingState } from '@/types/image-types';
 import { processImagesWithSightengine } from '@/services/sightengine-service';
@@ -31,7 +32,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       return;
     }
 
-    console.log(`Starting to process ${imageFiles.length} images`);
     setIsProcessing(true);
     
     try {
@@ -40,7 +40,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         onProcessingUpdate
       );
       
-      console.log('Processing completed:', processedImages);
       onImagesUploaded(processedImages);
       
       const highQualityCount = processedImages.filter(img => img.isHighQuality).length;
@@ -61,6 +60,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   };
 
   const handleZipFile = async (zipFile: File) => {
+    // For now, we'll show a message that zip processing needs additional setup
     toast({
       title: "Zip file upload",
       description: "Zip file processing will be implemented in the next update. Please extract and upload individual images for now.",
@@ -135,10 +135,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               variant="outline"
               className="flex items-center gap-2"
               disabled={isProcessing}
-              onClick={() => {
-                const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-                input?.click();
-              }}
+              onClick={() => document.querySelector('input[type="file"]')?.click()}
             >
               <FileImage className="h-5 w-5" />
               Select Individual Images

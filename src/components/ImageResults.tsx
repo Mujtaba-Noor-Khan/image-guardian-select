@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { ImageData } from '@/types/image-types';
-import { Download, RotateCcw, CheckCircle, XCircle, Star } from 'lucide-react';
+import { Download, RotateCcw, CheckCircle, XCircle, Star, Eye } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import JSZip from 'jszip';
 
@@ -32,6 +32,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
     }
 
     if (highQualityImages.length === 1) {
+      // Download single image directly
       const image = highQualityImages[0];
       const link = document.createElement('a');
       link.href = image.dataUrl;
@@ -40,6 +41,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
       return;
     }
 
+    // Create ZIP file for multiple images
     const zip = new JSZip();
     
     for (const image of highQualityImages) {
@@ -62,6 +64,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
   return (
     <div className="space-y-6">
+      {/* Summary Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -69,7 +72,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
             Processing Results
           </CardTitle>
           <CardDescription>
-            Quality assessment complete for {images.length} images (Score ≥ 0.8 required)
+            Quality assessment complete for {images.length} images (Score ≥ 0.8 and not blurry required)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,6 +126,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
         </CardContent>
       </Card>
 
+      {/* Images Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {displayImages.map((image) => (
           <Card key={image.id} className="overflow-hidden">
@@ -158,6 +162,15 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                   <p className="text-xs text-gray-600">
                     Quality Score: {image.qualityScore.toFixed(3)}
                   </p>
+                )}
+                
+                {image.isBlurry !== undefined && (
+                  <div className="flex items-center gap-1">
+                    <Eye className="h-3 w-3 text-gray-500" />
+                    <p className="text-xs text-gray-600">
+                      {image.isBlurry ? 'Blurry' : 'Sharp'}
+                    </p>
+                  </div>
                 )}
                 
                 {image.error && (
