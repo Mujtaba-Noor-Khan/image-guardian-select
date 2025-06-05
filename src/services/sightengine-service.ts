@@ -37,7 +37,7 @@ export const processImagesWithSightengine = async (
         dataUrl: await fileToDataUrl(file),
       };
 
-      console.log(`Processing image: ${file.name}`);
+      console.log(`Processing image: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
       
       const qualityScore = await assessImageQuality(file);
       imageData.qualityScore = qualityScore;
@@ -54,14 +54,15 @@ export const processImagesWithSightengine = async (
         name: file.name,
         originalFile: file,
         dataUrl: await fileToDataUrl(file),
-        error: 'Failed to assess quality',
+        error: error instanceof Error ? error.message : 'Failed to assess quality',
         isHighQuality: false,
       };
       
       results.push(imageData);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Small delay to prevent overwhelming the API
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   onProgressUpdate({
@@ -75,43 +76,98 @@ export const processImagesWithSightengine = async (
 };
 
 const assessImageQuality = async (file: File): Promise<number> => {
-  console.log(`Making API call for ${file.name}`);
+  console.log(`Starting API call for ${file.name}`);
+  console.log(`File details - Name: ${file.name}, Size: ${file.size}, Type: ${file.type}, Last Modified: ${new Date(file.lastModified)}`);
   
+  // Validate file size (Sightengine has limits)
+  const maxSizeInMB = 10;
+  const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+  if (file.size > maxSizeInBytes) {
+    throw new Error(`File too large. Maximum size is ${maxSizeInMB}MB, got ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+  }
+
+  // Validate file type
+  const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+  if (!supportedTypes.includes(file.type)) {
+    throw new Error(`Unsupported file type: ${file.type}. Supported types: ${supportedTypes.join(', ')}`);
+  }
+
   const formData = new FormData();
   formData.append('media', file);
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
 
-  console.log('FormData contents:', {
-    media: file.name,
-    models: 'quality',
-    api_user: API_USER
-  });
-
-  const response = await fetch('https://api.sightengine.com/1.0/check.json', {
+  console.log('Request details:', {
+    url: 'https://api.sightengine.com/1.0/check.json',
     method: 'POST',
-    body: formData,
+    fileName: file.name,
+    fileSize: file.size,
+    fileType: file.type,
+    models: 'quality',
+    api_user: API_USER,
+    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
   });
 
-  console.log(`API response status: ${response.status}`);
+  let response: Response;
+  
+  try {
+    console.log('Making fetch request...');
+    response = await fetch('https://api.sightengine.com/1.0/check.json', {
+      method: 'POST',
+      body: formData,
+    });
+    console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
+  } catch (fetchError) {
+    console.error('Fetch error:', fetchError);
+    throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown fetch error'}`);
+  }
+
+  let responseText: string;
+  try {
+    responseText = await response.text();
+    console.log(`Raw response text (first 500 chars): ${responseText.substring(0, 500)}`);
+  } catch (textError) {
+    console.error('Error reading response text:', textError);
+    throw new Error('Failed to read API response');
+  }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Sightengine API error: ${response.status} - ${errorText}`);
-    throw new Error(`Sightengine API error: ${response.status}`);
+    console.error(`API error - Status: ${response.status}, Response: ${responseText}`);
+    
+    // Try to parse error details
+    try {
+      const errorData = JSON.parse(responseText);
+      console.error('Parsed error data:', errorData);
+      throw new Error(`Sightengine API error (${response.status}): ${errorData.error?.message || errorData.message || 'Unknown error'}`);
+    } catch (parseError) {
+      throw new Error(`Sightengine API error (${response.status}): ${responseText || 'Unknown error'}`);
+    }
   }
 
-  const data: SightengineResponse = await response.json();
-  console.log('API response data:', data);
+  let data: SightengineResponse;
+  try {
+    data = JSON.parse(responseText);
+    console.log('Parsed API response:', JSON.stringify(data, null, 2));
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    console.error('Response text that failed to parse:', responseText);
+    throw new Error('Invalid JSON response from Sightengine API');
+  }
   
   if (data.status !== 'success') {
-    console.error('Sightengine API returned error status:', data);
-    throw new Error('Sightengine API returned error status');
+    console.error('API returned non-success status:', data);
+    const errorMessage = data.status === 'failure' ? 'API request failed' : `Unexpected status: ${data.status}`;
+    throw new Error(errorMessage);
   }
 
-  const qualityScore = data.quality?.score ?? 0;
-  console.log(`Quality score for ${file.name}: ${qualityScore}`);
+  if (!data.quality || typeof data.quality.score !== 'number') {
+    console.error('No quality data in response:', data);
+    throw new Error('No quality score in API response');
+  }
+
+  const qualityScore = data.quality.score;
+  console.log(`Successfully extracted quality score for ${file.name}: ${qualityScore}`);
   
   return qualityScore;
 };
@@ -120,7 +176,10 @@ const fileToDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      reject(new Error('Failed to read file'));
+    };
     reader.readAsDataURL(file);
   });
 };
