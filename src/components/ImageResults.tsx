@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { ImageData } from '@/types/image-types';
-import { Download, RotateCcw, CheckCircle, XCircle, Star, Eye } from 'lucide-react';
+import { Download, RotateCcw, CheckCircle, XCircle, Star } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import JSZip from 'jszip';
 
@@ -72,7 +72,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
             Processing Results
           </CardTitle>
           <CardDescription>
-            Quality assessment complete for {images.length} images (Score ≥ 0.8 and not blurry required)
+            Quality assessment complete for {images.length} images (Score ≥ 0.8 required)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,15 +162,6 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                   <p className="text-xs text-gray-600">
                     Quality Score: {image.qualityScore.toFixed(3)}
                   </p>
-                )}
-                
-                {image.isBlurry !== undefined && (
-                  <div className="flex items-center gap-1">
-                    <Eye className="h-3 w-3 text-gray-500" />
-                    <p className="text-xs text-gray-600">
-                      {image.isBlurry ? 'Blurry' : 'Sharp'}
-                    </p>
-                  </div>
                 )}
                 
                 {image.error && (

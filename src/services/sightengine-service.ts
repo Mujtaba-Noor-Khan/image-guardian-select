@@ -4,7 +4,6 @@ import { ImageData, ProcessingState, SightengineResponse } from '@/types/image-t
 const API_USER = '10034372';
 const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
 const QUALITY_THRESHOLD = 0.8;
-const BLUR_THRESHOLD = 0.5; // Images with blur score > 0.5 are considered blurry
 
 export const processImagesWithSightengine = async (
   files: File[],
@@ -38,14 +37,17 @@ export const processImagesWithSightengine = async (
         dataUrl: await fileToDataUrl(file),
       };
 
-      // Call Sightengine API for both quality and blur detection
-      const assessmentResult = await assessImageQualityAndBlur(file);
-      imageData.qualityScore = assessmentResult.qualityScore;
-      imageData.isBlurry = assessmentResult.isBlurry;
+      console.log(`Processing image: ${file.name}`);
       
-      // Image is high quality only if score >= 0.8 AND not blurry
-      imageData.isHighQuality = assessmentResult.qualityScore >= QUALITY_THRESHOLD && !assessmentResult.isBlurry;
+      // Call Sightengine API for quality assessment only
+      const qualityScore = await assessImageQuality(file);
+      imageData.qualityScore = qualityScore;
+      
+      // Image is high quality if score >= 0.8
+      imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
+      console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+      
       results.push(imageData);
     } catch (error) {
       console.error(`Error processing ${file.name}:`, error);
@@ -76,13 +78,12 @@ export const processImagesWithSightengine = async (
   return results;
 };
 
-const assessImageQualityAndBlur = async (file: File): Promise<{
-  qualityScore: number;
-  isBlurry: boolean;
-}> => {
+const assessImageQuality = async (file: File): Promise<number> => {
+  console.log(`Making API call for ${file.name}`);
+  
   const formData = new FormData();
   formData.append('media', file);
-  formData.append('models', 'quality,blur');
+  formData.append('models', 'quality'); // Only use quality model
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
 
@@ -91,24 +92,26 @@ const assessImageQualityAndBlur = async (file: File): Promise<{
     body: formData,
   });
 
+  console.log(`API response status: ${response.status}`);
+
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Sightengine API error: ${response.status} - ${errorText}`);
     throw new Error(`Sightengine API error: ${response.status}`);
   }
 
   const data: SightengineResponse = await response.json();
+  console.log('API response data:', data);
   
   if (data.status !== 'success') {
+    console.error('Sightengine API returned error status:', data);
     throw new Error('Sightengine API returned error status');
   }
 
   const qualityScore = data.quality?.score ?? 0;
-  const blurScore = data.blur?.score ?? 0;
-  const isBlurry = blurScore > BLUR_THRESHOLD;
-
-  return {
-    qualityScore,
-    isBlurry
-  };
+  console.log(`Quality score for ${file.name}: ${qualityScore}`);
+  
+  return qualityScore;
 };
 
 const fileToDataUrl = (file: File): Promise<string> => {
