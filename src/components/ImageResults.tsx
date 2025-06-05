@@ -32,7 +32,6 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
     }
 
     if (highQualityImages.length === 1) {
-      // Download single image directly
       const image = highQualityImages[0];
       const link = document.createElement('a');
       link.href = image.dataUrl;
@@ -41,7 +40,6 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
       return;
     }
 
-    // Create ZIP file for multiple images
     const zip = new JSZip();
     
     for (const image of highQualityImages) {
@@ -64,7 +62,6 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
   return (
     <div className="space-y-6">
-      {/* Summary Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -126,7 +123,6 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
         </CardContent>
       </Card>
 
-      {/* Images Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {displayImages.map((image) => (
           <Card key={image.id} className="overflow-hidden">

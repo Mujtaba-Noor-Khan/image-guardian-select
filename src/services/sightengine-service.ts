@@ -39,11 +39,8 @@ export const processImagesWithSightengine = async (
 
       console.log(`Processing image: ${file.name}`);
       
-      // Call Sightengine API for quality assessment only
       const qualityScore = await assessImageQuality(file);
       imageData.qualityScore = qualityScore;
-      
-      // Image is high quality if score >= 0.8
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
       console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
@@ -64,7 +61,6 @@ export const processImagesWithSightengine = async (
       results.push(imageData);
     }
 
-    // Small delay to prevent API rate limiting
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
