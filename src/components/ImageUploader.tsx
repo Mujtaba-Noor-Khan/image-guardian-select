@@ -135,7 +135,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               variant="outline"
               className="flex items-center gap-2"
               disabled={isProcessing}
-              onClick={() => document.querySelector('input[type="file"]')?.click()}
+              onClick={() => {
+                const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+                input?.click();
+              }}
             >
               <FileImage className="h-5 w-5" />
               Select Individual Images
