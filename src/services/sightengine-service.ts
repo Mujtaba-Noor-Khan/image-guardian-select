@@ -3,7 +3,8 @@ import { ImageData, ProcessingState, SightengineResponse } from '@/types/image-t
 
 const API_USER = '10034372';
 const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
-const QUALITY_THRESHOLD = 0.2;
+const QUALITY_THRESHOLD = 0.8;
+const BLUR_THRESHOLD = 0.5; // Images with blur score > 0.5 are considered blurry
 
 export const processImagesWithSightengine = async (
   files: File[],
@@ -37,10 +38,13 @@ export const processImagesWithSightengine = async (
         dataUrl: await fileToDataUrl(file),
       };
 
-      // Call Sightengine API
-      const qualityScore = await assessImageQuality(file);
-      imageData.qualityScore = qualityScore;
-      imageData.isHighQuality = qualityScore > QUALITY_THRESHOLD;
+      // Call Sightengine API for both quality and blur detection
+      const assessmentResult = await assessImageQualityAndBlur(file);
+      imageData.qualityScore = assessmentResult.qualityScore;
+      imageData.isBlurry = assessmentResult.isBlurry;
+      
+      // Image is high quality only if score >= 0.8 AND not blurry
+      imageData.isHighQuality = assessmentResult.qualityScore >= QUALITY_THRESHOLD && !assessmentResult.isBlurry;
 
       results.push(imageData);
     } catch (error) {
@@ -72,10 +76,13 @@ export const processImagesWithSightengine = async (
   return results;
 };
 
-const assessImageQuality = async (file: File): Promise<number> => {
+const assessImageQualityAndBlur = async (file: File): Promise<{
+  qualityScore: number;
+  isBlurry: boolean;
+}> => {
   const formData = new FormData();
   formData.append('media', file);
-  formData.append('models', 'quality');
+  formData.append('models', 'quality,blur');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
 
@@ -94,7 +101,14 @@ const assessImageQuality = async (file: File): Promise<number> => {
     throw new Error('Sightengine API returned error status');
   }
 
-  return data.quality?.score ?? 0;
+  const qualityScore = data.quality?.score ?? 0;
+  const blurScore = data.blur?.score ?? 0;
+  const isBlurry = blurScore > BLUR_THRESHOLD;
+
+  return {
+    qualityScore,
+    isBlurry
+  };
 };
 
 const fileToDataUrl = (file: File): Promise<string> => {
