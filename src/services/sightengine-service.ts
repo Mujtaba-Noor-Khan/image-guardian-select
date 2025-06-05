@@ -83,9 +83,15 @@ const assessImageQuality = async (file: File): Promise<number> => {
   
   const formData = new FormData();
   formData.append('media', file);
-  formData.append('models', 'quality'); // Only use quality model
+  formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
+
+  console.log('FormData contents:', {
+    media: file.name,
+    models: 'quality',
+    api_user: API_USER
+  });
 
   const response = await fetch('https://api.sightengine.com/1.0/check.json', {
     method: 'POST',
