@@ -3,7 +3,7 @@ import { ImageData, ProcessingState, SightengineResponse } from '@/types/image-t
 
 const API_USER = '10034372';
 const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
-const QUALITY_THRESHOLD = 0.2;
+const QUALITY_THRESHOLD = 0.8;
 
 export const processImagesWithSightengine = async (
   files: File[],
@@ -37,11 +37,14 @@ export const processImagesWithSightengine = async (
         dataUrl: await fileToDataUrl(file),
       };
 
-      // Call Sightengine API
+      console.log(`Processing image: ${file.name}`);
+      
       const qualityScore = await assessImageQuality(file);
       imageData.qualityScore = qualityScore;
-      imageData.isHighQuality = qualityScore > QUALITY_THRESHOLD;
+      imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
+      console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+      
       results.push(imageData);
     } catch (error) {
       console.error(`Error processing ${file.name}:`, error);
@@ -58,7 +61,6 @@ export const processImagesWithSightengine = async (
       results.push(imageData);
     }
 
-    // Small delay to prevent API rate limiting
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
@@ -73,28 +75,45 @@ export const processImagesWithSightengine = async (
 };
 
 const assessImageQuality = async (file: File): Promise<number> => {
+  console.log(`Making API call for ${file.name}`);
+  
   const formData = new FormData();
   formData.append('media', file);
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
 
+  console.log('FormData contents:', {
+    media: file.name,
+    models: 'quality',
+    api_user: API_USER
+  });
+
   const response = await fetch('https://api.sightengine.com/1.0/check.json', {
     method: 'POST',
     body: formData,
   });
 
+  console.log(`API response status: ${response.status}`);
+
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Sightengine API error: ${response.status} - ${errorText}`);
     throw new Error(`Sightengine API error: ${response.status}`);
   }
 
   const data: SightengineResponse = await response.json();
+  console.log('API response data:', data);
   
   if (data.status !== 'success') {
+    console.error('Sightengine API returned error status:', data);
     throw new Error('Sightengine API returned error status');
   }
 
-  return data.quality?.score ?? 0;
+  const qualityScore = data.quality?.score ?? 0;
+  console.log(`Quality score for ${file.name}: ${qualityScore}`);
+  
+  return qualityScore;
 };
 
 const fileToDataUrl = (file: File): Promise<string> => {
