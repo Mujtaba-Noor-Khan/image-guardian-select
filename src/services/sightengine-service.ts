@@ -1,4 +1,3 @@
-
 import { ImageData, ProcessingState, SightengineResponse, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from './excel-service';
 
@@ -119,12 +118,13 @@ export const processExcelFile = async (
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Starting API call for URL: ${imageUrl}`);
   
-  // For URLs, we use URLSearchParams with application/x-www-form-urlencoded
-  const params = new URLSearchParams();
-  params.append('media', imageUrl);
-  params.append('models', 'quality');
-  params.append('api_user', API_USER);
-  params.append('api_secret', API_SECRET);
+  // For URLs, we still use FormData but pass the URL as a string value
+  // This ensures proper multipart/form-data encoding that Sightengine expects
+  const formData = new FormData();
+  formData.append('media', imageUrl);
+  formData.append('models', 'quality');
+  formData.append('api_user', API_USER);
+  formData.append('api_secret', API_SECRET);
 
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
@@ -141,10 +141,8 @@ const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
     console.log('Making fetch request...');
     response = await fetch('https://api.sightengine.com/1.0/check.json', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params,
+      // Don't set Content-Type header - let FormData set it automatically with boundary
+      body: formData,
     });
     console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
   } catch (fetchError) {
