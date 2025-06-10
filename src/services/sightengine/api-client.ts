@@ -82,7 +82,18 @@ export const createFormData = (media: string | File): FormData => {
   const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
   
   const formData = new FormData();
-  formData.append('media', media); // Works for both File objects and URL strings
+  
+  // Handle URL strings vs File objects properly
+  if (typeof media === 'string') {
+    // For URL strings, pass directly as string value
+    formData.append('media', media);
+    console.log('Added URL string to FormData:', media);
+  } else {
+    // For File objects, pass the file directly
+    formData.append('media', media);
+    console.log('Added File object to FormData:', media.name);
+  }
+  
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
