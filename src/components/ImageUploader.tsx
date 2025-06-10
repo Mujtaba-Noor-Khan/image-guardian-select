@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, FileImage } from 'lucide-react';
@@ -20,13 +19,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const processExcelFileHandler = async (file: File) => {
-    console.log(`Starting to process Excel file: ${file.name}`);
+    console.log(`ImageUploader: Starting to process Excel file: ${file.name}`);
     setIsProcessing(true);
     
     try {
+      console.log('ImageUploader: Calling processExcelFile');
       const { parsedData, images } = await processExcelFile(file, onProcessingUpdate);
       
-      console.log('Excel processing completed:', images);
+      console.log('ImageUploader: Excel processing completed:', images);
       onImagesUploaded(images);
       
       const highQualityCount = images.filter(img => img.isHighQuality).length;
@@ -35,7 +35,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         description: `Found ${highQualityCount} high-quality images out of ${images.length} processed from ${parsedData.totalUrls} URLs in the Excel file.`,
       });
     } catch (error) {
-      console.error('Excel processing error:', error);
+      console.error('ImageUploader: Excel processing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       if (errorMessage.includes('Invalid URLs found:')) {
@@ -52,6 +52,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         });
       }
     } finally {
+      console.log('ImageUploader: Setting isProcessing to false');
       setIsProcessing(false);
     }
   };

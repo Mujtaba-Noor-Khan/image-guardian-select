@@ -9,7 +9,10 @@ export const processExcelFile = async (
   file: File,
   onProgressUpdate: (state: ProcessingState) => void
 ): Promise<{ parsedData: ParsedExcelData; images: ImageData[] }> => {
+  console.log('processExcelFile: Starting Excel file processing for:', file.name);
+  
   // Step 1: Parse Excel file
+  console.log('processExcelFile: Setting parsing phase');
   onProgressUpdate({
     isProcessing: true,
     currentImage: 0,
@@ -18,16 +21,27 @@ export const processExcelFile = async (
     phase: 'parsing'
   });
 
-  const parsedData = await parseExcelFile(file);
+  console.log('processExcelFile: Calling parseExcelFile');
+  let parsedData: ParsedExcelData;
+  try {
+    parsedData = await parseExcelFile(file);
+    console.log('processExcelFile: Excel parsing completed successfully:', parsedData);
+  } catch (error) {
+    console.error('processExcelFile: Excel parsing failed:', error);
+    throw error;
+  }
   
   if (parsedData.invalidUrls.length > 0) {
+    console.log('processExcelFile: Invalid URLs found, throwing error');
     throw new Error(`Invalid URLs found:\n${parsedData.invalidUrls.join('\n')}`);
   }
 
   if (parsedData.urls.length === 0) {
+    console.log('processExcelFile: No valid URLs found, throwing error');
     throw new Error('No valid .jpg URLs found in column A of the Excel file.');
   }
 
+  console.log('processExcelFile: Starting image processing phase');
   // Step 2: Process URLs
   const results: ImageData[] = [];
   const totalImages = parsedData.urls.length;
@@ -43,6 +57,7 @@ export const processExcelFile = async (
   for (let i = 0; i < parsedData.urls.length; i++) {
     const url = parsedData.urls[i];
     
+    console.log(`processExcelFile: Processing image ${i + 1}/${totalImages}: ${url}`);
     onProgressUpdate({
       isProcessing: true,
       currentImage: i + 1,
@@ -58,17 +73,17 @@ export const processExcelFile = async (
         url: url,
       };
 
-      console.log(`Processing image URL: ${url}`);
+      console.log(`processExcelFile: Assessing quality for: ${url}`);
       
       const qualityScore = await assessImageQualityFromUrl(url);
       imageData.qualityScore = qualityScore;
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
-      console.log(`Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+      console.log(`processExcelFile: Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
       
       results.push(imageData);
     } catch (error) {
-      console.error(`Error processing ${url}:`, error);
+      console.error(`processExcelFile: Error processing ${url}:`, error);
       
       const imageData: ImageData = {
         id: `img-${Date.now()}-${i}`,
@@ -85,6 +100,7 @@ export const processExcelFile = async (
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
+  console.log('processExcelFile: All images processed, updating final state');
   onProgressUpdate({
     isProcessing: false,
     currentImage: totalImages,
@@ -93,6 +109,7 @@ export const processExcelFile = async (
     phase: 'processing'
   });
 
+  console.log('processExcelFile: Processing complete, returning results');
   return { parsedData, images: results };
 };
 
