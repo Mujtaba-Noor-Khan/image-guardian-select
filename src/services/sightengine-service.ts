@@ -1,3 +1,4 @@
+
 import { ImageData, ProcessingState, SightengineResponse, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from './excel-service';
 
@@ -118,12 +119,12 @@ export const processExcelFile = async (
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Starting API call for URL: ${imageUrl}`);
   
-  // Use FormData but pass the URL as a string value to the media field
-  const formData = new FormData();
-  formData.append('media', imageUrl);
-  formData.append('models', 'quality');
-  formData.append('api_user', API_USER);
-  formData.append('api_secret', API_SECRET);
+  // For URLs, we use URLSearchParams with application/x-www-form-urlencoded
+  const params = new URLSearchParams();
+  params.append('media', imageUrl);
+  params.append('models', 'quality');
+  params.append('api_user', API_USER);
+  params.append('api_secret', API_SECRET);
 
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
@@ -140,7 +141,10 @@ const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
     console.log('Making fetch request...');
     response = await fetch('https://api.sightengine.com/1.0/check.json', {
       method: 'POST',
-      body: formData, // FormData automatically sets multipart/form-data content-type
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
     });
     console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
   } catch (fetchError) {
