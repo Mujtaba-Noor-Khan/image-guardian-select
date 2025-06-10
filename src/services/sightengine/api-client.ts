@@ -24,6 +24,7 @@ export const makeSightengineRequest = async (
     response = await fetch('https://api.sightengine.com/1.0/check.json', {
       method: 'POST',
       body: formData, // Let browser handle multipart encoding automatically
+      // DO NOT set Content-Type header - let browser set it with boundary
     });
     console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
   } catch (fetchError) {
