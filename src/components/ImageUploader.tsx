@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, FileImage } from 'lucide-react';
@@ -30,27 +31,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       onImagesUploaded(images);
       
       const highQualityCount = images.filter(img => img.isHighQuality).length;
+      
+      let description = `Found ${highQualityCount} high-quality images out of ${images.length} processed from ${parsedData.urls.length} valid URLs.`;
+      
+      if (parsedData.invalidUrls.length > 0) {
+        description += ` ${parsedData.invalidUrls.length} rows were skipped (likely headers or invalid URLs).`;
+      }
+      
       toast({
         title: "Processing complete!",
-        description: `Found ${highQualityCount} high-quality images out of ${images.length} processed from ${parsedData.totalUrls} URLs in the Excel file.`,
+        description,
       });
     } catch (error) {
       console.error('ImageUploader: Excel processing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      if (errorMessage.includes('Invalid URLs found:')) {
-        toast({
-          title: "Invalid URLs detected",
-          description: "Please check your Excel file and ensure all URLs in column A point to .jpg files. Fix the invalid URLs and try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Processing failed",
-          description: "There was an error processing your Excel file. Please check the file format and try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Processing failed",
+        description: errorMessage.includes('No valid .jpg URLs') 
+          ? "No valid .jpg image URLs found in column A. Please check your Excel file format."
+          : "There was an error processing your Excel file. Please check the file format and try again.",
+        variant: "destructive",
+      });
     } finally {
       console.log('ImageUploader: Setting isProcessing to false');
       setIsProcessing(false);

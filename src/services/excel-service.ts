@@ -31,10 +31,19 @@ export const parseExcelFile = async (file: File): Promise<ParsedExcelData> => {
         const allUrls: string[] = [];
         const invalidUrls: string[] = [];
         
+        // Common header patterns to ignore
+        const headerPatterns = /^(url|link|image|photo|picture|src|source|href)$/i;
+        
         jsonData.forEach((row: any, index: number) => {
           if (Array.isArray(row) && row[0]) {
             const url = String(row[0]).trim();
             if (url) {
+              // Skip common header patterns
+              if (headerPatterns.test(url)) {
+                console.log(`parseExcelFile: Skipping header row ${index + 1}: ${url}`);
+                return;
+              }
+              
               // Validate that URL points to .jpg file
               if (url.toLowerCase().endsWith('.jpg') || url.toLowerCase().endsWith('.jpeg')) {
                 // Basic URL validation
@@ -47,8 +56,13 @@ export const parseExcelFile = async (file: File): Promise<ParsedExcelData> => {
                   console.log(`parseExcelFile: Invalid URL format at row ${index + 1}: ${url}`);
                 }
               } else {
-                invalidUrls.push(`Row ${index + 1}: Not a .jpg file - ${url}`);
-                console.log(`parseExcelFile: Not a .jpg file at row ${index + 1}: ${url}`);
+                // Only report as invalid if it looks like it's trying to be a URL
+                if (url.includes('http') || url.includes('.')) {
+                  invalidUrls.push(`Row ${index + 1}: Not a .jpg file - ${url}`);
+                  console.log(`parseExcelFile: Not a .jpg file at row ${index + 1}: ${url}`);
+                } else {
+                  console.log(`parseExcelFile: Skipping non-URL content at row ${index + 1}: ${url}`);
+                }
               }
             }
           }

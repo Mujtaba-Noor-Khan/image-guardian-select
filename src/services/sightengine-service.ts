@@ -1,3 +1,4 @@
+
 import { ImageData, ProcessingState, SightengineResponse, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from './excel-service';
 
@@ -31,9 +32,11 @@ export const processExcelFile = async (
     throw error;
   }
   
+  // Only throw error for actual problematic URLs, not header rows
   if (parsedData.invalidUrls.length > 0) {
-    console.log('processExcelFile: Invalid URLs found, throwing error');
-    throw new Error(`Invalid URLs found:\n${parsedData.invalidUrls.join('\n')}`);
+    console.log('processExcelFile: Invalid URLs found:', parsedData.invalidUrls);
+    // Log but don't throw error - let the user know but continue processing
+    console.warn('processExcelFile: Some invalid URLs were found but will be skipped:', parsedData.invalidUrls);
   }
 
   if (parsedData.urls.length === 0) {
