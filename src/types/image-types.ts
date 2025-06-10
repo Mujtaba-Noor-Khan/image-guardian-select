@@ -2,8 +2,9 @@
 export interface ImageData {
   id: string;
   name: string;
-  originalFile: File;
-  dataUrl: string;
+  originalFile?: File;
+  dataUrl?: string;
+  url?: string;
   qualityScore?: number;
   isHighQuality?: boolean;
   error?: string;
@@ -14,6 +15,7 @@ export interface ProcessingState {
   currentImage: number;
   totalImages: number;
   processedImages: number;
+  phase?: 'parsing' | 'processing';
 }
 
 export interface SightengineResponse {
@@ -30,4 +32,10 @@ export interface SightengineResponse {
     id: string;
     uri: string;
   };
+}
+
+export interface ParsedExcelData {
+  urls: string[];
+  invalidUrls: string[];
+  totalUrls: number;
 }

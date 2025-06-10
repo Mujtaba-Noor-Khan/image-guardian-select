@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { ImageData } from '@/types/image-types';
-import { Download, RotateCcw, CheckCircle, XCircle, Star } from 'lucide-react';
+import { Download, RotateCcw, CheckCircle, XCircle, Star, ExternalLink } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import JSZip from 'jszip';
 
 interface ImageResultsProps {
   images: ImageData[];
@@ -21,7 +20,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
   const lowQualityImages = images.filter(img => !img.isHighQuality);
   const displayImages = showOnlyHighQuality ? highQualityImages : images;
 
-  const downloadHighQualityImages = async () => {
+  const downloadHighQualityUrls = () => {
     if (highQualityImages.length === 0) {
       toast({
         title: "No high-quality images",
@@ -31,32 +30,20 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
       return;
     }
 
-    if (highQualityImages.length === 1) {
-      const image = highQualityImages[0];
-      const link = document.createElement('a');
-      link.href = image.dataUrl;
-      link.download = image.name;
-      link.click();
-      return;
-    }
-
-    const zip = new JSZip();
+    const urls = highQualityImages
+      .filter(img => img.url)
+      .map(img => img.url)
+      .join('\n');
     
-    for (const image of highQualityImages) {
-      const response = await fetch(image.dataUrl);
-      const blob = await response.blob();
-      zip.file(image.name, blob);
-    }
-
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const blob = new Blob([urls], { type: 'text/plain' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = 'high-quality-images.zip';
+    link.href = URL.createObjectURL(blob);
+    link.download = 'high-quality-image-urls.txt';
     link.click();
     
     toast({
       title: "Download started",
-      description: `Downloading ${highQualityImages.length} high-quality images as a ZIP file.`,
+      description: `Downloading ${highQualityImages.length} high-quality image URLs as a text file.`,
     });
   };
 
@@ -96,12 +83,12 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
-              onClick={downloadHighQualityImages}
+              onClick={downloadHighQualityUrls}
               className="flex items-center gap-2"
               disabled={highQualityImages.length === 0}
             >
               <Download className="h-4 w-4" />
-              Download High Quality ({highQualityImages.length})
+              Download High Quality URLs ({highQualityImages.length})
             </Button>
             
             <Button
@@ -117,7 +104,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
               className="flex items-center gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              Upload New Images
+              Upload New File
             </Button>
           </div>
         </CardContent>
@@ -129,9 +116,12 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
             <CardContent className="p-0">
               <AspectRatio ratio={1}>
                 <img
-                  src={image.dataUrl}
+                  src={image.url || image.dataUrl}
                   alt={image.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
                 />
               </AspectRatio>
               
@@ -158,6 +148,18 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                   <p className="text-xs text-gray-600">
                     Quality Score: {image.qualityScore.toFixed(3)}
                   </p>
+                )}
+                
+                {image.url && (
+                  <a
+                    href={image.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Original
+                  </a>
                 )}
                 
                 {image.error && (

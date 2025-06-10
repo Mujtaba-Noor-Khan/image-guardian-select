@@ -1,11 +1,11 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileImage, Archive } from 'lucide-react';
+import { Upload, FileText, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageData, ProcessingState } from '@/types/image-types';
-import { processImagesWithSightengine } from '@/services/sightengine-service';
+import { processImagesWithSightengine, processExcelFile } from '@/services/sightengine-service';
 import { toast } from '@/components/ui/use-toast';
 
 interface ImageUploaderProps {
@@ -19,7 +19,44 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const processFiles = async (files: File[]) => {
+  const processExcelFileHandler = async (file: File) => {
+    console.log(`Starting to process Excel file: ${file.name}`);
+    setIsProcessing(true);
+    
+    try {
+      const { parsedData, images } = await processExcelFile(file, onProcessingUpdate);
+      
+      console.log('Excel processing completed:', images);
+      onImagesUploaded(images);
+      
+      const highQualityCount = images.filter(img => img.isHighQuality).length;
+      toast({
+        title: "Processing complete!",
+        description: `Found ${highQualityCount} high-quality images out of ${images.length} processed from ${parsedData.totalUrls} URLs in the Excel file.`,
+      });
+    } catch (error) {
+      console.error('Excel processing error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (errorMessage.includes('Invalid URLs found:')) {
+        toast({
+          title: "Invalid URLs detected",
+          description: "Please check your Excel file and ensure all URLs in column A point to .jpg files. Fix the invalid URLs and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Processing failed",
+          description: "There was an error processing your Excel file. Please check the file format and try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processImageFiles = async (files: File[]) => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
     if (imageFiles.length === 0) {
@@ -60,32 +97,25 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
   };
 
-  const handleZipFile = async (zipFile: File) => {
-    toast({
-      title: "Zip file upload",
-      description: "Zip file processing will be implemented in the next update. Please extract and upload individual images for now.",
-      variant: "default",
-    });
-  };
-
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const zipFiles = acceptedFiles.filter(file => 
-      file.type === 'application/zip' || file.name.endsWith('.zip')
+    const excelFiles = acceptedFiles.filter(file => 
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+      file.name.endsWith('.xlsx')
     );
     
-    if (zipFiles.length > 0) {
-      await handleZipFile(zipFiles[0]);
+    if (excelFiles.length > 0) {
+      await processExcelFileHandler(excelFiles[0]);
       return;
     }
     
-    await processFiles(acceptedFiles);
+    await processImageFiles(acceptedFiles);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp'],
-      'application/zip': ['.zip'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
     },
     disabled: isProcessing,
   });
@@ -95,11 +125,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-            <FileImage className="h-8 w-8 text-blue-600" />
-            Upload Images for Quality Assessment
+            <FileText className="h-8 w-8 text-blue-600" />
+            Upload Excel File or Images for Quality Assessment
           </CardTitle>
           <CardDescription className="text-lg">
-            Drag & drop images or zip files, or click to browse
+            Upload an Excel file (.xlsx) with image URLs in column A, or drag & drop individual images
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,21 +146,40 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             
             {isDragActive ? (
               <p className="text-xl text-blue-600 font-medium">
-                Drop your images here...
+                Drop your files here...
               </p>
             ) : (
               <div className="space-y-2">
                 <p className="text-xl text-gray-600 font-medium">
-                  {isProcessing ? 'Processing images...' : 'Choose images to upload'}
+                  {isProcessing ? 'Processing...' : 'Choose files to upload'}
                 </p>
                 <p className="text-gray-500">
-                  Supports: JPEG, PNG, GIF, BMP, WebP, and ZIP files
+                  Supports: Excel files (.xlsx) with image URLs, or individual images (JPEG, PNG, GIF, BMP, WebP)
                 </p>
               </div>
             )}
           </div>
           
           <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={isProcessing}
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) processExcelFileHandler(file);
+                };
+                input.click();
+              }}
+            >
+              <FileText className="h-5 w-5" />
+              Select Excel File (.xlsx)
+            </Button>
+            
             <Button
               variant="outline"
               className="flex items-center gap-2"
@@ -143,25 +192,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <FileImage className="h-5 w-5" />
               Select Individual Images
             </Button>
-            
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={isProcessing}
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.zip';
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0];
-                  if (file) handleZipFile(file);
-                };
-                input.click();
-              }}
-            >
-              <Archive className="h-5 w-5" />
-              Upload ZIP File
-            </Button>
+          </div>
+          
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">Excel File Format:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Place image URLs in column A (no header required)</li>
+              <li>• URLs must point to .jpg or .jpeg files</li>
+              <li>• Up to 400 images supported</li>
+              <li>• Other columns will be ignored</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
