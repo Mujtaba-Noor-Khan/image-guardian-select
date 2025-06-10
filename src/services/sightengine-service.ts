@@ -1,3 +1,4 @@
+
 import { ImageData, ProcessingState, SightengineResponse, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from './excel-service';
 
@@ -118,13 +119,24 @@ export const processExcelFile = async (
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Starting API call for URL: ${imageUrl}`);
   
-  // For URLs, we still use FormData but pass the URL as a string value
-  // This ensures proper multipart/form-data encoding that Sightengine expects
+  // Create FormData and explicitly force multipart/form-data encoding
   const formData = new FormData();
   formData.append('media', imageUrl);
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
+
+  // Generate a boundary for multipart/form-data
+  const boundary = '----formdata-lovable-' + Math.random().toString(36).substr(2, 9);
+  
+  // Manually construct multipart/form-data body
+  let body = '';
+  for (const [key, value] of formData.entries()) {
+    body += `--${boundary}\r\n`;
+    body += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
+    body += `${value}\r\n`;
+  }
+  body += `--${boundary}--\r\n`;
 
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
@@ -132,17 +144,20 @@ const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
     imageUrl: imageUrl,
     models: 'quality',
     api_user: API_USER,
-    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
+    api_secret: API_SECRET ? '***hidden***' : 'NOT SET',
+    contentType: `multipart/form-data; boundary=${boundary}`
   });
 
   let response: Response;
   
   try {
-    console.log('Making fetch request...');
+    console.log('Making fetch request with explicit multipart/form-data...');
     response = await fetch('https://api.sightengine.com/1.0/check.json', {
       method: 'POST',
-      // Don't set Content-Type header - let FormData set it automatically with boundary
-      body: formData,
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: body,
     });
     console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
   } catch (fetchError) {
