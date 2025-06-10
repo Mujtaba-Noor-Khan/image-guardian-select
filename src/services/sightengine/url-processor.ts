@@ -118,8 +118,8 @@ export const processExcelFile = async (
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Starting API call for URL: ${imageUrl}`);
   
-  const formData = createFormData(imageUrl, true);
-  const data = await makeSightengineRequest(formData, true);
+  const formData = createFormData(imageUrl);
+  const data = await makeSightengineRequest(formData);
 
   const qualityScore = data.quality!.score;
   console.log(`Successfully extracted quality score for ${imageUrl}: ${qualityScore}`);

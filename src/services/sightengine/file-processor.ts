@@ -1,4 +1,3 @@
-
 import { ImageData, ProcessingState } from '@/types/image-types';
 import { makeSightengineRequest, createFormData } from './api-client';
 import { fileToDataUrl } from './utils';
@@ -90,8 +89,8 @@ const assessImageQuality = async (file: File): Promise<number> => {
     throw new Error(`Unsupported file type: ${file.type}. Supported types: ${supportedTypes.join(', ')}`);
   }
 
-  const formData = createFormData(file, false);
-  const data = await makeSightengineRequest(formData, false);
+  const formData = createFormData(file);
+  const data = await makeSightengineRequest(formData);
 
   const qualityScore = data.quality!.score;
   console.log(`Successfully extracted quality score for ${file.name}: ${qualityScore}`);

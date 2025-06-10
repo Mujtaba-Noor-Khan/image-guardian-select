@@ -5,50 +5,25 @@ const API_USER = '10034372';
 const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
 
 export const makeSightengineRequest = async (
-  formData: FormData,
-  isUrl: boolean = false
+  formData: FormData
 ): Promise<SightengineResponse> => {
-  const requestType = isUrl ? 'URL' : 'file';
-  console.log(`Starting API call for ${requestType}`);
-
-  let body: string | FormData;
-  let headers: HeadersInit = {};
-
-  if (isUrl) {
-    // For URLs, manually construct multipart/form-data body
-    const boundary = '----formdata-lovable-' + Math.random().toString(36).substr(2, 9);
-    
-    body = '';
-    for (const [key, value] of formData.entries()) {
-      body += `--${boundary}\r\n`;
-      body += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
-      body += `${value}\r\n`;
-    }
-    body += `--${boundary}--\r\n`;
-
-    headers['Content-Type'] = `multipart/form-data; boundary=${boundary}`;
-  } else {
-    // For files, let FormData handle the encoding
-    body = formData;
-  }
+  console.log(`Starting API call with FormData`);
 
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
     method: 'POST',
     models: 'quality',
     api_user: API_USER,
-    api_secret: API_SECRET ? '***hidden***' : 'NOT SET',
-    requestType
+    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
   });
 
   let response: Response;
   
   try {
-    console.log(`Making fetch request for ${requestType}...`);
+    console.log(`Making fetch request...`);
     response = await fetch('https://api.sightengine.com/1.0/check.json', {
       method: 'POST',
-      headers,
-      body,
+      body: formData, // Let browser handle multipart encoding automatically
     });
     console.log(`Fetch completed. Response status: ${response.status} ${response.statusText}`);
   } catch (fetchError) {
@@ -101,12 +76,12 @@ export const makeSightengineRequest = async (
   return data;
 };
 
-export const createFormData = (media: string | File, isUrl: boolean = false): FormData => {
+export const createFormData = (media: string | File): FormData => {
   const API_USER = '10034372';
   const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
   
   const formData = new FormData();
-  formData.append('media', media);
+  formData.append('media', media); // Works for both File objects and URL strings
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
   formData.append('api_secret', API_SECRET);
