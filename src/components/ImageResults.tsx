@@ -125,7 +125,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                     </AspectRatio>
                   </div>
                 </HoverCardTrigger>
-                <HoverCardContent className="w-96 p-2">
+                <HoverCardContent className="w-80 sm:w-96 md:w-[28rem] lg:w-[32rem] xl:w-[36rem] p-2">
                   <AspectRatio ratio={1}>
                     <img
                       src={image.url || image.dataUrl}
