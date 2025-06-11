@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { ImageData } from '@/types/image-types';
-import { Download, RotateCcw, CheckCircle, XCircle, Star, ExternalLink } from 'lucide-react';
+import { Download, RotateCcw, CheckCircle, XCircle, Star, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { downloadImagesAsZip, DownloadProgress } from '@/utils/zipDownload';
 
 interface ImageResultsProps {
   images: ImageData[];
@@ -15,12 +16,14 @@ interface ImageResultsProps {
 
 export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) => {
   const [showOnlyHighQuality, setShowOnlyHighQuality] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   
   const highQualityImages = images.filter(img => img.isHighQuality);
   const lowQualityImages = images.filter(img => !img.isHighQuality);
   const displayImages = showOnlyHighQuality ? highQualityImages : images;
 
-  const downloadHighQualityUrls = () => {
+  const downloadHighQualityImages = async () => {
     if (highQualityImages.length === 0) {
       toast({
         title: "No high-quality images",
@@ -30,21 +33,42 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
       return;
     }
 
-    const urls = highQualityImages
-      .filter(img => img.url)
-      .map(img => img.url)
-      .join('\n');
+    setIsDownloading(true);
+    setDownloadProgress({ current: 0, total: highQualityImages.length, status: 'downloading' });
+
+    try {
+      await downloadImagesAsZip(highQualityImages, setDownloadProgress);
+      
+      toast({
+        title: "Download complete!",
+        description: `Successfully downloaded ${highQualityImages.length} high-quality images as a zip file.`,
+      });
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading the images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
+    }
+  };
+
+  const getProgressText = () => {
+    if (!downloadProgress) return '';
     
-    const blob = new Blob([urls], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'high-quality-image-urls.txt';
-    link.click();
-    
-    toast({
-      title: "Download started",
-      description: `Downloading ${highQualityImages.length} high-quality image URLs as a text file.`,
-    });
+    switch (downloadProgress.status) {
+      case 'downloading':
+        return `Downloading ${downloadProgress.current}/${downloadProgress.total} images...`;
+      case 'zipping':
+        return 'Creating zip file...';
+      case 'complete':
+        return 'Download complete!';
+      default:
+        return '';
+    }
   };
 
   return (
@@ -83,17 +107,22 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
-              onClick={downloadHighQualityUrls}
+              onClick={downloadHighQualityImages}
               className="flex items-center gap-2"
-              disabled={highQualityImages.length === 0}
+              disabled={highQualityImages.length === 0 || isDownloading}
             >
-              <Download className="h-4 w-4" />
-              Download High Quality URLs ({highQualityImages.length})
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isDownloading ? 'Downloading...' : `Download High Quality Images (${highQualityImages.length})`}
             </Button>
             
             <Button
               variant="outline"
               onClick={() => setShowOnlyHighQuality(!showOnlyHighQuality)}
+              disabled={isDownloading}
             >
               {showOnlyHighQuality ? 'Show All Images' : 'Show Only High Quality'}
             </Button>
@@ -102,11 +131,29 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
               variant="outline"
               onClick={onReset}
               className="flex items-center gap-2"
+              disabled={isDownloading}
             >
               <RotateCcw className="h-4 w-4" />
               Upload New File
             </Button>
           </div>
+          
+          {isDownloading && downloadProgress && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium">{getProgressText()}</span>
+              </div>
+              <div className="mt-2 bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${(downloadProgress.current / downloadProgress.total) * 100}%` 
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
