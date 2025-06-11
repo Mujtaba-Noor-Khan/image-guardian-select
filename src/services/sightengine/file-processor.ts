@@ -1,5 +1,6 @@
+
 import { ImageData, ProcessingState } from '@/types/image-types';
-import { makeSightengineRequest, createFormData } from './api-client';
+import { makeSightengineRequestFromFile, createFormData } from './api-client';
 import { fileToDataUrl } from './utils';
 
 const QUALITY_THRESHOLD = 0.8;
@@ -90,7 +91,7 @@ const assessImageQuality = async (file: File): Promise<number> => {
   }
 
   const formData = createFormData(file);
-  const data = await makeSightengineRequest(formData);
+  const data = await makeSightengineRequestFromFile(formData);
 
   const qualityScore = data.quality!.score;
   console.log(`Successfully extracted quality score for ${file.name}: ${qualityScore}`);

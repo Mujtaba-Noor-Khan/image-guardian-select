@@ -1,7 +1,7 @@
 
 import { ImageData, ProcessingState, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from '../excel-service';
-import { makeSightengineRequest, createFormData } from './api-client';
+import { makeSightengineRequestFromUrl } from './api-client';
 
 const QUALITY_THRESHOLD = 0.8;
 
@@ -118,8 +118,7 @@ export const processExcelFile = async (
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Starting API call for URL: ${imageUrl}`);
   
-  const formData = createFormData(imageUrl);
-  const data = await makeSightengineRequest(formData);
+  const data = await makeSightengineRequestFromUrl(imageUrl);
 
   const qualityScore = data.quality!.score;
   console.log(`Successfully extracted quality score for ${imageUrl}: ${qualityScore}`);

@@ -1,10 +1,86 @@
 
+import axios from 'axios';
 import { SightengineResponse } from '@/types/image-types';
 
 const API_USER = '10034372';
 const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
 
-export const makeSightengineRequest = async (
+export const makeSightengineRequestFromUrl = async (
+  imageUrl: string
+): Promise<SightengineResponse> => {
+  console.log(`Starting API call with URL: ${imageUrl}`);
+
+  // Validate URL format
+  try {
+    new URL(imageUrl);
+  } catch (error) {
+    throw new Error(`Invalid URL format: ${imageUrl}`);
+  }
+
+  // Check if URL points to a valid image format
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+  const urlLower = imageUrl.toLowerCase();
+  const hasValidExtension = validExtensions.some(ext => urlLower.includes(ext));
+  
+  if (!hasValidExtension) {
+    throw new Error(`URL does not appear to point to a supported image format: ${imageUrl}`);
+  }
+
+  console.log('Request details:', {
+    url: 'https://api.sightengine.com/1.0/check.json',
+    method: 'GET',
+    imageUrl,
+    models: 'quality',
+    api_user: API_USER,
+    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
+  });
+
+  const params = {
+    url: imageUrl,
+    models: 'quality',
+    api_user: API_USER,
+    api_secret: API_SECRET
+  };
+
+  let response;
+  
+  try {
+    console.log(`Making GET request...`);
+    response = await axios.get('https://api.sightengine.com/1.0/check.json', {
+      params: params,
+      timeout: 30000 // 30 second timeout
+    });
+    console.log(`Request completed. Response status: ${response.status}`);
+  } catch (axiosError: any) {
+    console.error('Axios error:', axiosError);
+    if (axiosError.response) {
+      console.error('Error response data:', axiosError.response.data);
+      throw new Error(`Sightengine API error (${axiosError.response.status}): ${axiosError.response.data?.error?.message || axiosError.response.data?.message || 'Unknown error'}`);
+    } else if (axiosError.request) {
+      throw new Error(`Network error: Unable to reach Sightengine API`);
+    } else {
+      throw new Error(`Request error: ${axiosError.message}`);
+    }
+  }
+
+  const data = response.data;
+  console.log('Parsed API response:', JSON.stringify(data, null, 2));
+  
+  if (data.status !== 'success') {
+    console.error('API returned non-success status:', data);
+    const errorMessage = data.status === 'failure' ? 'API request failed' : `Unexpected status: ${data.status}`;
+    throw new Error(errorMessage);
+  }
+
+  if (!data.quality || typeof data.quality.score !== 'number') {
+    console.error('No quality data in response:', data);
+    throw new Error('No quality score in API response');
+  }
+
+  return data;
+};
+
+export const makeSightengineRequestFromFile = async (
   formData: FormData
 ): Promise<SightengineResponse> => {
   console.log(`Starting API call with FormData`);
@@ -77,22 +153,11 @@ export const makeSightengineRequest = async (
   return data;
 };
 
-export const createFormData = (media: string | File): FormData => {
-  const API_USER = '10034372';
-  const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
-  
+export const createFormData = (file: File): FormData => {
   const formData = new FormData();
   
-  // Handle URL strings vs File objects properly
-  if (typeof media === 'string') {
-    // For URL strings, pass directly as string value
-    formData.append('media', media);
-    console.log('Added URL string to FormData:', media);
-  } else {
-    // For File objects, pass the file directly
-    formData.append('media', media);
-    console.log('Added File object to FormData:', media.name);
-  }
+  formData.append('media', file);
+  console.log('Added File object to FormData:', file.name);
   
   formData.append('models', 'quality');
   formData.append('api_user', API_USER);
