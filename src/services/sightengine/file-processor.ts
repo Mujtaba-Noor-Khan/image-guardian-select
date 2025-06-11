@@ -1,9 +1,8 @@
-
 import { ImageData, ProcessingState } from '@/types/image-types';
 import { makeSightengineRequestFromFile, createFormData } from './api-client';
 import { fileToDataUrl } from './utils';
 
-const QUALITY_THRESHOLD = 0.8;
+const QUALITY_THRESHOLD = 0.82;
 
 export const processImagesWithSightengine = async (
   files: File[],
@@ -43,7 +42,7 @@ export const processImagesWithSightengine = async (
       imageData.qualityScore = qualityScore;
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
-      console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+      console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
       
       results.push(imageData);
     } catch (error) {

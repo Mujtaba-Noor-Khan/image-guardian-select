@@ -1,9 +1,8 @@
-
 import { ImageData, ProcessingState, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from '../excel-service';
 import { makeSightengineRequestFromUrl } from './api-client';
 
-const QUALITY_THRESHOLD = 0.8;
+const QUALITY_THRESHOLD = 0.82;
 
 export const processExcelFile = async (
   file: File,
@@ -81,7 +80,7 @@ export const processExcelFile = async (
       imageData.qualityScore = qualityScore;
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
 
-      console.log(`processExcelFile: Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+      console.log(`processExcelFile: Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
       
       results.push(imageData);
     } catch (error) {

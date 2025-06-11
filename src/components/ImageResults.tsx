@@ -56,7 +56,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
             Processing Results
           </CardTitle>
           <CardDescription>
-            Quality assessment complete for {images.length} images (Score ≥ 0.8 required)
+            Quality assessment complete for {images.length} images (Score ≥ 0.82 required)
           </CardDescription>
         </CardHeader>
         <CardContent>
