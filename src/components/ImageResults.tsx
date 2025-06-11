@@ -125,32 +125,17 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                     </AspectRatio>
                   </div>
                 </HoverCardTrigger>
-                <HoverCardContent className="w-80">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">{image.name}</h4>
-                    <AspectRatio ratio={16/9}>
-                      <img
-                        src={image.url || image.dataUrl}
-                        alt={image.name}
-                        className="w-full h-full object-contain rounded-md"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.svg';
-                        }}
-                      />
-                    </AspectRatio>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Quality: {image.qualityScore?.toFixed(3)}</span>
-                      {image.isHighQuality ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          High Quality
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-red-100 text-red-800">
-                          Low Quality
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+                <HoverCardContent className="w-96 p-2">
+                  <AspectRatio ratio={1}>
+                    <img
+                      src={image.url || image.dataUrl}
+                      alt={image.name}
+                      className="w-full h-full object-contain rounded-md"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.svg';
+                      }}
+                    />
+                  </AspectRatio>
                 </HoverCardContent>
               </HoverCard>
               
@@ -179,38 +164,24 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                   </p>
                 )}
                 
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => downloadImage(image)}
-                    className="flex items-center gap-1 text-xs"
-                  >
-                    {image.dataUrl ? (
-                      <>
-                        <Download className="h-3 w-3" />
-                        Download
-                      </>
-                    ) : (
-                      <>
-                        <ExternalLink className="h-3 w-3" />
-                        Open
-                      </>
-                    )}
-                  </Button>
-                  
-                  {image.url && (
-                    <a
-                      href={image.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadImage(image)}
+                  className="w-full flex items-center gap-1 text-xs"
+                >
+                  {image.dataUrl ? (
+                    <>
+                      <Download className="h-3 w-3" />
+                      Download
+                    </>
+                  ) : (
+                    <>
                       <ExternalLink className="h-3 w-3" />
-                      Original
-                    </a>
+                      Open
+                    </>
                   )}
-                </div>
+                </Button>
                 
                 {image.error && (
                   <p className="text-xs text-red-600">
