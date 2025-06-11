@@ -4,10 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { ImageData } from '@/types/image-types';
-import { Download, RotateCcw, CheckCircle, XCircle, Star, ExternalLink, Loader2 } from 'lucide-react';
+import { Download, RotateCcw, CheckCircle, XCircle, Star, ExternalLink } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { downloadImagesAsZip, DownloadProgress } from '@/utils/zipDownload';
 
 interface ImageResultsProps {
   images: ImageData[];
@@ -16,58 +16,33 @@ interface ImageResultsProps {
 
 export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) => {
   const [showOnlyHighQuality, setShowOnlyHighQuality] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   
   const highQualityImages = images.filter(img => img.isHighQuality);
   const lowQualityImages = images.filter(img => !img.isHighQuality);
   const displayImages = showOnlyHighQuality ? highQualityImages : images;
 
-  const downloadHighQualityImages = async () => {
-    if (highQualityImages.length === 0) {
-      toast({
-        title: "No high-quality images",
-        description: "There are no high-quality images to download.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDownloading(true);
-    setDownloadProgress({ current: 0, total: highQualityImages.length, status: 'downloading' });
-
-    try {
-      await downloadImagesAsZip(highQualityImages, setDownloadProgress);
+  const downloadImage = (image: ImageData) => {
+    if (image.dataUrl) {
+      // For uploaded files, create a download link
+      const link = document.createElement('a');
+      link.href = image.dataUrl;
+      link.download = image.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
       toast({
-        title: "Download complete!",
-        description: `Successfully downloaded ${highQualityImages.length} high-quality images as a zip file.`,
+        title: "Download started",
+        description: `Downloading ${image.name}`,
       });
-    } catch (error) {
-      console.error('Download failed:', error);
+    } else if (image.url) {
+      // For external URLs, open in new tab due to CORS restrictions
+      window.open(image.url, '_blank');
+      
       toast({
-        title: "Download failed",
-        description: "There was an error downloading the images. Please try again.",
-        variant: "destructive",
+        title: "Image opened",
+        description: "Due to browser security, external images open in a new tab. Right-click to save.",
       });
-    } finally {
-      setIsDownloading(false);
-      setDownloadProgress(null);
-    }
-  };
-
-  const getProgressText = () => {
-    if (!downloadProgress) return '';
-    
-    switch (downloadProgress.status) {
-      case 'downloading':
-        return `Downloading ${downloadProgress.current}/${downloadProgress.total} images...`;
-      case 'zipping':
-        return 'Creating zip file...';
-      case 'complete':
-        return 'Download complete!';
-      default:
-        return '';
     }
   };
 
@@ -107,22 +82,8 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
-              onClick={downloadHighQualityImages}
-              className="flex items-center gap-2"
-              disabled={highQualityImages.length === 0 || isDownloading}
-            >
-              {isDownloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {isDownloading ? 'Downloading...' : `Download High Quality Images (${highQualityImages.length})`}
-            </Button>
-            
-            <Button
               variant="outline"
               onClick={() => setShowOnlyHighQuality(!showOnlyHighQuality)}
-              disabled={isDownloading}
             >
               {showOnlyHighQuality ? 'Show All Images' : 'Show Only High Quality'}
             </Button>
@@ -131,29 +92,17 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
               variant="outline"
               onClick={onReset}
               className="flex items-center gap-2"
-              disabled={isDownloading}
             >
               <RotateCcw className="h-4 w-4" />
               Upload New File
             </Button>
           </div>
           
-          {isDownloading && downloadProgress && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-medium">{getProgressText()}</span>
-              </div>
-              <div className="mt-2 bg-blue-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${(downloadProgress.current / downloadProgress.total) * 100}%` 
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Download Info:</strong> Use individual download buttons below. External images will open in new tabs due to browser security restrictions.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -161,16 +110,49 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
         {displayImages.map((image) => (
           <Card key={image.id} className="overflow-hidden">
             <CardContent className="p-0">
-              <AspectRatio ratio={1}>
-                <img
-                  src={image.url || image.dataUrl}
-                  alt={image.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-              </AspectRatio>
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="cursor-pointer">
+                    <AspectRatio ratio={1}>
+                      <img
+                        src={image.url || image.dataUrl}
+                        alt={image.name}
+                        className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </AspectRatio>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">{image.name}</h4>
+                    <AspectRatio ratio={16/9}>
+                      <img
+                        src={image.url || image.dataUrl}
+                        alt={image.name}
+                        className="w-full h-full object-contain rounded-md"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </AspectRatio>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Quality: {image.qualityScore?.toFixed(3)}</span>
+                      {image.isHighQuality ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          High Quality
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">
+                          Low Quality
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
               
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
@@ -197,17 +179,38 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
                   </p>
                 )}
                 
-                {image.url && (
-                  <a
-                    href={image.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => downloadImage(image)}
+                    className="flex items-center gap-1 text-xs"
                   >
-                    <ExternalLink className="h-3 w-3" />
-                    View Original
-                  </a>
-                )}
+                    {image.dataUrl ? (
+                      <>
+                        <Download className="h-3 w-3" />
+                        Download
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="h-3 w-3" />
+                        Open
+                      </>
+                    )}
+                  </Button>
+                  
+                  {image.url && (
+                    <a
+                      href={image.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Original
+                    </a>
+                  )}
+                </div>
                 
                 {image.error && (
                   <p className="text-xs text-red-600">
