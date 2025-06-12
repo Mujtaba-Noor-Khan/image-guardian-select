@@ -198,10 +198,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           </div>
           
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Excel File Format:</h4>
+            <h4 className="font-medium text-blue-900 mb-2">Rules when uploading an Excel File with image links:</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Place image URLs in column A (no header required)</li>
-              <li>• URLs must point to .jpg or .jpeg files</li>
+              <li>• Place image links in column A (no header required)</li>
+              <li>• Links must point to .jpg or .jpeg files</li>
               <li>• Up to 400 images supported</li>
               <li>• Other columns will be ignored</li>
             </ul>
