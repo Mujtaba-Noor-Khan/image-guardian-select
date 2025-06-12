@@ -131,9 +131,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <FileText className="h-8 w-8 text-blue-600" />
             Upload Excel File or Images for Quality Assessment
           </CardTitle>
-          <CardDescription className="text-lg">
-            Upload an Excel file (.xlsx) with image URLs in column A, or drag & drop individual images
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div
