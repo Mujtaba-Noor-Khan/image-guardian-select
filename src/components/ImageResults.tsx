@@ -55,7 +55,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
             Processing Results
           </CardTitle>
           <CardDescription>
-            Quality assessment complete for {images.length} images (Score ≥ 0.82 required)
+            Quality assessment complete for {images.length} images
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -100,7 +100,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
           
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Download Info:</strong> Use individual download buttons below. External images will open in new tabs due to browser security restrictions.
+              <strong>Download Info:</strong> To download specific images, click the Open button. This will open the image in a new tab for you to download.
             </p>
           </div>
         </CardContent>
