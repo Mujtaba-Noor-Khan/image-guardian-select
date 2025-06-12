@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageData, ProcessingState } from '@/types/image-types';
 import { processImagesWithSightengine, processExcelFile } from '@/services/sightengine-service';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
+import { ApiCredentialsInput } from './ApiCredentialsInput';
+import { hasStoredCredentials, storeCredentials } from '@/services/sightengine/api-client';
 
 interface ImageUploaderProps {
   onImagesUploaded: (images: ImageData[]) => void;
@@ -18,6 +20,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onProcessingUpdate,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [credentialsSet, setCredentialsSet] = useState(hasStoredCredentials());
+
+  const handleCredentialsSet = (apiUser: string, apiSecret: string) => {
+    storeCredentials(apiUser, apiSecret);
+    setCredentialsSet(true);
+    toast({
+      title: "Credentials set successfully",
+      description: "You can now upload and process images.",
+    });
+  };
 
   const processExcelFileHandler = async (file: File) => {
     console.log(`ImageUploader: Starting to process Excel file: ${file.name}`);
@@ -122,6 +134,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     },
     disabled: isProcessing,
   });
+
+  // Show credentials input if not set
+  if (!credentialsSet) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <ApiCredentialsInput onCredentialsSet={handleCredentialsSet} />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">

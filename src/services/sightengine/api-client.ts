@@ -2,13 +2,49 @@
 import axios from 'axios';
 import { SightengineResponse } from '@/types/image-types';
 
-const API_USER = '10034372';
-const API_SECRET = 'KuAaagxXHcJZWaQyAimxHWf4Mx5PmLq7';
+// Storage key for API credentials
+const CREDENTIALS_STORAGE_KEY = 'sightengine_credentials';
+
+interface ApiCredentials {
+  apiUser: string;
+  apiSecret: string;
+}
+
+// Get credentials from sessionStorage
+const getStoredCredentials = (): ApiCredentials | null => {
+  try {
+    const stored = sessionStorage.getItem(CREDENTIALS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Store credentials in sessionStorage
+export const storeCredentials = (apiUser: string, apiSecret: string): void => {
+  const credentials = { apiUser, apiSecret };
+  sessionStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(credentials));
+};
+
+// Check if credentials are available
+export const hasStoredCredentials = (): boolean => {
+  return getStoredCredentials() !== null;
+};
+
+// Clear stored credentials
+export const clearCredentials = (): void => {
+  sessionStorage.removeItem(CREDENTIALS_STORAGE_KEY);
+};
 
 export const makeSightengineRequestFromUrl = async (
   imageUrl: string
 ): Promise<SightengineResponse> => {
   console.log(`Starting API call with URL: ${imageUrl}`);
+
+  const credentials = getStoredCredentials();
+  if (!credentials) {
+    throw new Error('API credentials not found. Please set your Sightengine API credentials.');
+  }
 
   // Validate URL format
   try {
@@ -31,15 +67,15 @@ export const makeSightengineRequestFromUrl = async (
     method: 'GET',
     imageUrl,
     models: 'quality',
-    api_user: API_USER,
-    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
+    api_user: credentials.apiUser,
+    api_secret: '***hidden***'
   });
 
   const params = {
     url: imageUrl,
     models: 'quality',
-    api_user: API_USER,
-    api_secret: API_SECRET
+    api_user: credentials.apiUser,
+    api_secret: credentials.apiSecret
   };
 
   let response;
@@ -85,12 +121,17 @@ export const makeSightengineRequestFromFile = async (
 ): Promise<SightengineResponse> => {
   console.log(`Starting API call with FormData`);
 
+  const credentials = getStoredCredentials();
+  if (!credentials) {
+    throw new Error('API credentials not found. Please set your Sightengine API credentials.');
+  }
+
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
     method: 'POST',
     models: 'quality',
-    api_user: API_USER,
-    api_secret: API_SECRET ? '***hidden***' : 'NOT SET'
+    api_user: credentials.apiUser,
+    api_secret: '***hidden***'
   });
 
   let response: Response;
@@ -154,14 +195,19 @@ export const makeSightengineRequestFromFile = async (
 };
 
 export const createFormData = (file: File): FormData => {
+  const credentials = getStoredCredentials();
+  if (!credentials) {
+    throw new Error('API credentials not found. Please set your Sightengine API credentials.');
+  }
+
   const formData = new FormData();
   
   formData.append('media', file);
   console.log('Added File object to FormData:', file.name);
   
   formData.append('models', 'quality');
-  formData.append('api_user', API_USER);
-  formData.append('api_secret', API_SECRET);
+  formData.append('api_user', credentials.apiUser);
+  formData.append('api_secret', credentials.apiSecret);
   
   return formData;
 };
