@@ -37,11 +37,10 @@ const Index = () => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Image Quality Guardian
+            Image Quality Filter
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Upload your images and let AI assess their technical quality. 
-            Only high-quality images (score ≥ 0.82) will be marked as high quality.
+            Upload your images and let AI assess their technical quality.
           </p>
         </div>
 
