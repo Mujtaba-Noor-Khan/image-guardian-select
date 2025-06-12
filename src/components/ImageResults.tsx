@@ -94,7 +94,7 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
               className="flex items-center gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              Upload New File
+              Upload new images
             </Button>
           </div>
           
