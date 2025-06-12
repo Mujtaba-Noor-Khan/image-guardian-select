@@ -129,7 +129,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-2xl">
             <FileText className="h-8 w-8 text-blue-600" />
-            Upload Excel File or Images for Quality Assessment
+            Upload an Excel doc or Image files for Quality Assessment
           </CardTitle>
         </CardHeader>
         <CardContent>
