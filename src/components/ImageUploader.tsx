@@ -32,10 +32,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       
       const highQualityCount = images.filter(img => img.isHighQuality).length;
       
-      let description = `Found ${highQualityCount} high-quality images out of ${images.length} processed from ${parsedData.urls.length} valid URLs.`;
+      let description = `${highQualityCount} high-quality images out of ${images.length} from ${parsedData.urls.length}.`;
       
       if (parsedData.invalidUrls.length > 0) {
-        description += ` ${parsedData.invalidUrls.length} rows were skipped (likely headers or invalid URLs).`;
+        description += ` ${parsedData.invalidUrls.length} images were skipped (likely headers or invalid image URLs).`;
       }
       
       toast({
