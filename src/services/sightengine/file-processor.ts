@@ -1,6 +1,7 @@
 import { ImageData, ProcessingState } from '@/types/image-types';
 import { makeSightengineRequestFromFile, createFormData } from './api-client';
 import { fileToDataUrl } from './utils';
+import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
 
@@ -10,6 +11,7 @@ export const processImagesWithSightengine = async (
 ): Promise<ImageData[]> => {
   const results: ImageData[] = [];
   const totalImages = files.length;
+  let successfulApiCalls = 0;
 
   onProgressUpdate({
     isProcessing: true,
@@ -41,6 +43,7 @@ export const processImagesWithSightengine = async (
       const qualityScore = await assessImageQuality(file);
       imageData.qualityScore = qualityScore;
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
+      successfulApiCalls++;
 
       console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
       
@@ -63,6 +66,10 @@ export const processImagesWithSightengine = async (
     // Small delay to prevent overwhelming the API
     await new Promise(resolve => setTimeout(resolve, 200));
   }
+
+  // Update usage tracking
+  updateUsageStats(successfulApiCalls, results.length);
+  addUsageEntry(successfulApiCalls, results.length, 'file');
 
   onProgressUpdate({
     isProcessing: false,

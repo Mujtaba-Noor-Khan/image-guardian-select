@@ -1,6 +1,7 @@
 import { ImageData, ProcessingState, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from '../excel-service';
 import { makeSightengineRequestFromUrl } from './api-client';
+import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
 
@@ -46,6 +47,7 @@ export const processExcelFile = async (
   // Step 2: Process URLs
   const results: ImageData[] = [];
   const totalImages = parsedData.urls.length;
+  let successfulApiCalls = 0;
 
   onProgressUpdate({
     isProcessing: true,
@@ -79,6 +81,7 @@ export const processExcelFile = async (
       const qualityScore = await assessImageQualityFromUrl(url);
       imageData.qualityScore = qualityScore;
       imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
+      successfulApiCalls++;
 
       console.log(`processExcelFile: Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
       
@@ -100,6 +103,10 @@ export const processExcelFile = async (
     // Small delay to prevent overwhelming the API
     await new Promise(resolve => setTimeout(resolve, 200));
   }
+
+  // Update usage tracking
+  updateUsageStats(successfulApiCalls, results.length);
+  addUsageEntry(successfulApiCalls, results.length, 'excel', file.name);
 
   console.log('processExcelFile: All images processed, updating final state');
   onProgressUpdate({
