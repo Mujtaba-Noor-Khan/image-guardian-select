@@ -15,11 +15,17 @@ interface ImageResultsProps {
 }
 
 export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) => {
-  const [showOnlyHighQuality, setShowOnlyHighQuality] = useState(false);
+  const [showAllImages, setShowAllImages] = useState(false);
   
-  const highQualityImages = images.filter(img => img.isHighQuality);
-  const lowQualityImages = images.filter(img => !img.isHighQuality);
-  const displayImages = showOnlyHighQuality ? highQualityImages : images;
+  // Sort all images by quality score (highest first)
+  const sortedImages = [...images].sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0));
+  const highQualityImages = sortedImages.filter(img => img.isHighQuality);
+  const lowQualityImages = sortedImages.filter(img => !img.isHighQuality);
+  
+  // Default: show top 50 high-quality images, Expanded: show all images
+  const displayImages = showAllImages 
+    ? sortedImages 
+    : highQualityImages.slice(0, 50);
 
   const downloadImage = (image: ImageData) => {
     if (image.dataUrl) {
@@ -83,9 +89,9 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
               variant="outline"
-              onClick={() => setShowOnlyHighQuality(!showOnlyHighQuality)}
+              onClick={() => setShowAllImages(!showAllImages)}
             >
-              {showOnlyHighQuality ? 'Show All Images' : 'Show Only High Quality'}
+              {showAllImages ? 'Show Top Quality' : 'Show All Images'}
             </Button>
             
             <Button
