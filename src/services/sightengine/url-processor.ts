@@ -4,7 +4,7 @@ import { makeSightengineRequestFromUrl } from './api-client';
 import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
-const CONCURRENT_REQUESTS = 5; // Process 5 images at once
+const CONCURRENT_REQUESTS = 10; // Process 10 images at once
 
 export const processExcelFile = async (
   file: File,

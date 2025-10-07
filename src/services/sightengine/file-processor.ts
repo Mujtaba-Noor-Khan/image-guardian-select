@@ -4,7 +4,7 @@ import { fileToDataUrl } from './utils';
 import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
-const CONCURRENT_REQUESTS = 5; // Process 5 files at once
+const CONCURRENT_REQUESTS = 10; // Process 10 files at once
 
 export const processImagesWithSightengine = async (
   files: File[],
