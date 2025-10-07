@@ -4,6 +4,7 @@ import { makeSightengineRequestFromUrl } from './api-client';
 import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
+const CONCURRENT_REQUESTS = 5; // Process 5 images at once
 
 export const processExcelFile = async (
   file: File,
@@ -44,10 +45,26 @@ export const processExcelFile = async (
   }
 
   console.log('processExcelFile: Starting image processing phase');
-  // Step 2: Process URLs
+  // Step 2: Process URLs with batched parallelization
+  const results = await processUrlsInParallel(parsedData.urls, onProgressUpdate);
+
+  // Update usage tracking
+  const successfulApiCalls = results.filter(img => !img.error).length;
+  updateUsageStats(successfulApiCalls, results.length);
+  addUsageEntry(successfulApiCalls, results.length, 'excel', file.name);
+
+  console.log('processExcelFile: Processing complete, returning results');
+  return { parsedData, images: results };
+};
+
+// Process URLs in parallel batches
+const processUrlsInParallel = async (
+  urls: string[],
+  onProgressUpdate: (state: ProcessingState) => void
+): Promise<ImageData[]> => {
+  const totalImages = urls.length;
   const results: ImageData[] = [];
-  const totalImages = parsedData.urls.length;
-  let successfulApiCalls = 0;
+  let processedCount = 0;
 
   onProgressUpdate({
     isProcessing: true,
@@ -57,56 +74,50 @@ export const processExcelFile = async (
     phase: 'processing'
   });
 
-  for (let i = 0; i < parsedData.urls.length; i++) {
-    const url = parsedData.urls[i];
-    
-    console.log(`processExcelFile: Processing image ${i + 1}/${totalImages}: ${url}`);
-    onProgressUpdate({
-      isProcessing: true,
-      currentImage: i + 1,
-      totalImages,
-      processedImages: i,
-      phase: 'processing'
+  // Process URLs in batches
+  for (let i = 0; i < urls.length; i += CONCURRENT_REQUESTS) {
+    const batch = urls.slice(i, i + CONCURRENT_REQUESTS);
+    const batchStartIndex = i;
+
+    console.log(`processExcelFile: Processing batch starting at index ${i}, size: ${batch.length}`);
+
+    // Process batch in parallel
+    const batchPromises = batch.map(async (url, batchIndex) => {
+      const globalIndex = batchStartIndex + batchIndex;
+      return processImageUrl(url, globalIndex);
     });
 
-    try {
-      const imageData: ImageData = {
-        id: `img-${Date.now()}-${i}`,
-        name: url.split('/').pop() || `image-${i + 1}.jpg`,
-        url: url,
-      };
+    // Wait for all URLs in batch to complete
+    const batchResults = await Promise.allSettled(batchPromises);
 
-      console.log(`processExcelFile: Assessing quality for: ${url}`);
-      
-      const qualityScore = await assessImageQualityFromUrl(url);
-      imageData.qualityScore = qualityScore;
-      imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
-      successfulApiCalls++;
+    // Process results and update progress after each item
+    batchResults.forEach((result, batchIndex) => {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        const globalIndex = batchStartIndex + batchIndex;
+        const url = batch[batchIndex];
+        console.error(`Failed to process ${url}:`, result.reason);
+        results.push({
+          id: `img-${Date.now()}-${globalIndex}`,
+          name: url.split('/').pop() || `image-${globalIndex + 1}.jpg`,
+          url: url,
+          error: result.reason instanceof Error ? result.reason.message : 'Processing failed',
+          isHighQuality: false,
+        });
+      }
 
-      console.log(`processExcelFile: Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
-      
-      results.push(imageData);
-    } catch (error) {
-      console.error(`processExcelFile: Error processing ${url}:`, error);
-      
-      const imageData: ImageData = {
-        id: `img-${Date.now()}-${i}`,
-        name: url.split('/').pop() || `image-${i + 1}.jpg`,
-        url: url,
-        error: error instanceof Error ? error.message : 'Failed to assess quality',
-        isHighQuality: false,
-      };
-      
-      results.push(imageData);
-    }
-
-    // Small delay to prevent overwhelming the API
-    await new Promise(resolve => setTimeout(resolve, 200));
+      processedCount++;
+      // Update progress after each item completes
+      onProgressUpdate({
+        isProcessing: true,
+        currentImage: processedCount,
+        totalImages,
+        processedImages: processedCount,
+        phase: 'processing'
+      });
+    });
   }
-
-  // Update usage tracking
-  updateUsageStats(successfulApiCalls, results.length);
-  addUsageEntry(successfulApiCalls, results.length, 'excel', file.name);
 
   console.log('processExcelFile: All images processed, updating final state');
   onProgressUpdate({
@@ -117,8 +128,35 @@ export const processExcelFile = async (
     phase: 'processing'
   });
 
-  console.log('processExcelFile: Processing complete, returning results');
-  return { parsedData, images: results };
+  return results;
+};
+
+// Process single image URL
+const processImageUrl = async (url: string, index: number): Promise<ImageData> => {
+  try {
+    console.log(`Processing image ${index + 1}: ${url}`);
+    const qualityScore = await assessImageQualityFromUrl(url);
+
+    const imageData: ImageData = {
+      id: `img-${Date.now()}-${index}`,
+      name: url.split('/').pop() || `image-${index + 1}.jpg`,
+      url: url,
+      qualityScore: qualityScore,
+      isHighQuality: qualityScore >= QUALITY_THRESHOLD,
+    };
+
+    console.log(`Image ${url} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+    return imageData;
+  } catch (error) {
+    console.error(`Error processing ${url}:`, error);
+    return {
+      id: `img-${Date.now()}-${index}`,
+      name: url.split('/').pop() || `image-${index + 1}.jpg`,
+      url: url,
+      error: error instanceof Error ? error.message : 'Failed to assess quality',
+      isHighQuality: false,
+    };
+  }
 };
 
 const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {

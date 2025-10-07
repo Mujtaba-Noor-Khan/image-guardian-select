@@ -4,14 +4,15 @@ import { fileToDataUrl } from './utils';
 import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
 const QUALITY_THRESHOLD = 0.82;
+const CONCURRENT_REQUESTS = 5; // Process 5 files at once
 
 export const processImagesWithSightengine = async (
   files: File[],
   onProgressUpdate: (state: ProcessingState) => void
 ): Promise<ImageData[]> => {
-  const results: ImageData[] = [];
   const totalImages = files.length;
-  let successfulApiCalls = 0;
+  const results: ImageData[] = [];
+  let processedCount = 0;
 
   onProgressUpdate({
     isProcessing: true,
@@ -20,54 +21,54 @@ export const processImagesWithSightengine = async (
     processedImages: 0,
   });
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    
-    onProgressUpdate({
-      isProcessing: true,
-      currentImage: i + 1,
-      totalImages,
-      processedImages: i,
+  // Process files in batches
+  for (let i = 0; i < files.length; i += CONCURRENT_REQUESTS) {
+    const batch = files.slice(i, i + CONCURRENT_REQUESTS);
+    const batchStartIndex = i;
+
+    console.log(`Processing batch starting at index ${i}, size: ${batch.length}`);
+
+    // Process batch in parallel
+    const batchPromises = batch.map(async (file, batchIndex) => {
+      const globalIndex = batchStartIndex + batchIndex;
+      return processImageFile(file, globalIndex);
     });
 
-    try {
-      const imageData: ImageData = {
-        id: `img-${Date.now()}-${i}`,
-        name: file.name,
-        originalFile: file,
-        dataUrl: await fileToDataUrl(file),
-      };
+    // Wait for all files in batch to complete
+    const batchResults = await Promise.allSettled(batchPromises);
 
-      console.log(`Processing image: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
-      
-      const qualityScore = await assessImageQuality(file);
-      imageData.qualityScore = qualityScore;
-      imageData.isHighQuality = qualityScore >= QUALITY_THRESHOLD;
-      successfulApiCalls++;
+    // Process results and update progress after each item
+    batchResults.forEach((result, batchIndex) => {
+      const globalIndex = batchStartIndex + batchIndex;
+      const file = batch[batchIndex];
 
-      console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}, Threshold: ${QUALITY_THRESHOLD}`);
-      
-      results.push(imageData);
-    } catch (error) {
-      console.error(`Error processing ${file.name}:`, error);
-      
-      const imageData: ImageData = {
-        id: `img-${Date.now()}-${i}`,
-        name: file.name,
-        originalFile: file,
-        dataUrl: await fileToDataUrl(file),
-        error: error instanceof Error ? error.message : 'Failed to assess quality',
-        isHighQuality: false,
-      };
-      
-      results.push(imageData);
-    }
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        console.error(`Failed to process ${file.name}:`, result.reason);
+        results.push({
+          id: `img-${Date.now()}-${globalIndex}`,
+          name: file.name,
+          originalFile: file,
+          dataUrl: '',
+          error: result.reason instanceof Error ? result.reason.message : 'Processing failed',
+          isHighQuality: false,
+        });
+      }
 
-    // Small delay to prevent overwhelming the API
-    await new Promise(resolve => setTimeout(resolve, 200));
+      processedCount++;
+      // Update progress after each item completes
+      onProgressUpdate({
+        isProcessing: true,
+        currentImage: processedCount,
+        totalImages,
+        processedImages: processedCount,
+      });
+    });
   }
 
   // Update usage tracking
+  const successfulApiCalls = results.filter(img => !img.error).length;
   updateUsageStats(successfulApiCalls, results.length);
   addUsageEntry(successfulApiCalls, results.length, 'file');
 
@@ -79,6 +80,50 @@ export const processImagesWithSightengine = async (
   });
 
   return results;
+};
+
+// Process single file
+const processImageFile = async (file: File, index: number): Promise<ImageData> => {
+  try {
+    console.log(`Processing file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+
+    // Get data URL for preview
+    const dataUrl = await fileToDataUrl(file);
+
+    // Assess quality
+    const qualityScore = await assessImageQuality(file);
+
+    const imageData: ImageData = {
+      id: `img-${Date.now()}-${index}`,
+      name: file.name,
+      originalFile: file,
+      dataUrl: dataUrl,
+      qualityScore: qualityScore,
+      isHighQuality: qualityScore >= QUALITY_THRESHOLD,
+    };
+
+    console.log(`Image ${file.name} - Quality: ${qualityScore}, High Quality: ${imageData.isHighQuality}`);
+    return imageData;
+  } catch (error) {
+    console.error(`Error processing ${file.name}:`, error);
+
+    // Still get dataUrl for preview even on error
+    let dataUrl = '';
+    try {
+      dataUrl = await fileToDataUrl(file);
+    } catch {
+      // Ignore dataUrl error
+    }
+
+    return {
+      id: `img-${Date.now()}-${index}`,
+      name: file.name,
+      originalFile: file,
+      dataUrl: dataUrl,
+      error: error instanceof Error ? error.message : 'Failed to assess quality',
+      isHighQuality: false,
+    };
+  }
 };
 
 const assessImageQuality = async (file: File): Promise<number> => {
