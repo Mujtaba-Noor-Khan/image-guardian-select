@@ -5,7 +5,7 @@ import { Upload, FileText, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageData, ProcessingState } from '@/types/image-types';
-import { processImagesWithSightengine, processExcelFile } from '@/services/sightengine-service';
+import { processImagesWithSightengine, processExcelFile, processCosmeticExcelFile } from '@/services/sightengine-service';
 import { toast } from '@/hooks/use-toast';
 import { ApiCredentialsInput } from './ApiCredentialsInput';
 import { hasStoredCredentials, storeCredentials } from '@/services/sightengine/api-client';
@@ -13,11 +13,13 @@ import { hasStoredCredentials, storeCredentials } from '@/services/sightengine/a
 interface ImageUploaderProps {
   onImagesUploaded: (images: ImageData[]) => void;
   onProcessingUpdate: (state: ProcessingState) => void;
+  flowType: 'blades' | 'cosmetic-and-shrouds';
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   onImagesUploaded,
   onProcessingUpdate,
+  flowType,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [credentialsSet, setCredentialsSet] = useState(hasStoredCredentials());
@@ -36,8 +38,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     setIsProcessing(true);
     
     try {
-      console.log('ImageUploader: Calling processExcelFile');
-      const { parsedData, images } = await processExcelFile(file, onProcessingUpdate);
+      const processor = flowType === 'blades' ? processExcelFile : processCosmeticExcelFile;
+      console.log(`ImageUploader: Calling ${flowType} processor`);
+      const { parsedData, images } = await processor(file, onProcessingUpdate);
       
       console.log('ImageUploader: Excel processing completed:', images);
       onImagesUploaded(images);
@@ -218,10 +221,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-2">Rules when uploading an Excel File with image links:</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Place image links in column A (no header required)</li>
-              <li>• Links must point to .jpg or .jpeg files</li>
-              <li>• Up to 400 images supported</li>
-              <li>• Other columns will be ignored</li>
+              {flowType === 'blades' ? (
+                <>
+                  <li>• Place image links in column A (no header required)</li>
+                  <li>• Links must point to .jpg or .jpeg files</li>
+                  <li>• Up to 400 images supported</li>
+                  <li>• Other columns will be ignored</li>
+                </>
+              ) : (
+                <>
+                  <li>• Ensure 'Place' columns contain hyperlinked cells (e.g., 'View photo')</li>
+                  <li>• Hyperlinks must point to .jpg or .jpeg files</li>
+                  <li>• All sheets will be scanned</li>
+                  <li>• Up to 400 images supported</li>
+                </>
+              )}
             </ul>
           </div>
         </CardContent>

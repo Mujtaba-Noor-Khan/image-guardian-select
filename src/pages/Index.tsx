@@ -7,10 +7,12 @@ import { ImageUploader } from '@/components/ImageUploader';
 import { ImageResults } from '@/components/ImageResults';
 import { ProcessingProgress } from '@/components/ProcessingProgress';
 import { UsageWarning } from '@/components/UsageWarning';
+import { FlowSelector } from '@/components/FlowSelector';
 import { ImageData, ProcessingState } from '@/types/image-types';
 
 const Index = () => {
   const [images, setImages] = useState<ImageData[]>([]);
+  const [flowType, setFlowType] = useState<'blades' | 'cosmetic-and-shrouds' | null>(null);
   const [processingState, setProcessingState] = useState<ProcessingState>({
     isProcessing: false,
     currentImage: 0,
@@ -28,6 +30,7 @@ const Index = () => {
 
   const handleReset = () => {
     setImages([]);
+    setFlowType(null);
     setProcessingState({
       isProcessing: false,
       currentImage: 0,
@@ -63,8 +66,11 @@ const Index = () => {
           <ProcessingProgress state={processingState} />
         )}
 
-        {images.length === 0 && !processingState.isProcessing ? (
+        {images.length === 0 && !processingState.isProcessing && !flowType ? (
+          <FlowSelector onSelectFlow={setFlowType} />
+        ) : images.length === 0 && !processingState.isProcessing && flowType ? (
           <ImageUploader 
+            flowType={flowType}
             onImagesUploaded={handleImagesUploaded}
             onProcessingUpdate={handleProcessingUpdate}
           />

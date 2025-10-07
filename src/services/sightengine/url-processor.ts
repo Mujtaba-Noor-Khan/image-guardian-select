@@ -1,5 +1,6 @@
 import { ImageData, ProcessingState, ParsedExcelData } from '@/types/image-types';
 import { parseExcelFile } from '../excel-service';
+import { parseCosmeticExcelFile } from '../parse-excel-cosmetic';
 import { makeSightengineRequestFromUrl } from './api-client';
 import { updateUsageStats, addUsageEntry } from '@/services/usage-tracker';
 
@@ -168,4 +169,40 @@ const assessImageQualityFromUrl = async (imageUrl: string): Promise<number> => {
   console.log(`Successfully extracted quality score for ${imageUrl}: ${qualityScore}`);
   
   return qualityScore;
+};
+
+export const processCosmeticExcelFile = async (
+  file: File,
+  onProgressUpdate: (state: ProcessingState) => void
+): Promise<{ parsedData: ParsedExcelData; images: ImageData[] }> => {
+  onProgressUpdate({
+    isProcessing: true,
+    currentImage: 0,
+    totalImages: 0,
+    processedImages: 0,
+    phase: 'parsing'
+  });
+
+  let parsedData: ParsedExcelData;
+  try {
+    parsedData = await parseCosmeticExcelFile(file);
+  } catch (error) {
+    throw error;
+  }
+
+  if (parsedData.invalidUrls.length > 0) {
+    console.warn('processCosmeticExcelFile: Some invalid URLs were found but will be skipped:', parsedData.invalidUrls);
+  }
+
+  if (parsedData.urls.length === 0) {
+    throw new Error('No image links detected in \'Place\' columns.');
+  }
+
+  const results = await processUrlsInParallel(parsedData.urls, onProgressUpdate);
+
+  const successfulApiCalls = results.filter(img => !img.error).length;
+  updateUsageStats(successfulApiCalls, results.length);
+  addUsageEntry(successfulApiCalls, results.length, 'cosmetic-and-shrouds', file.name);
+
+  return { parsedData, images: results };
 };

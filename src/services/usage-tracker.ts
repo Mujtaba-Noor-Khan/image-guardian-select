@@ -4,7 +4,7 @@ export interface UsageEntry {
   timestamp: Date;
   apiCallsUsed: number;
   imagesProcessed: number;
-  source: 'file' | 'excel';
+  source: 'file' | 'excel' | 'cosmetic-and-shrouds';
   fileName?: string;
 }
 
@@ -113,7 +113,7 @@ export const getUsageHistory = (): UsageEntry[] => {
 export const addUsageEntry = (
   apiCallsUsed: number,
   imagesProcessed: number,
-  source: 'file' | 'excel',
+  source: 'file' | 'excel' | 'cosmetic-and-shrouds',
   fileName?: string
 ): void => {
   const entry: UsageEntry = {
