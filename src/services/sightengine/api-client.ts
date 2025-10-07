@@ -53,15 +53,6 @@ export const makeSightengineRequestFromUrl = async (
     throw new Error(`Invalid URL format: ${imageUrl}`);
   }
 
-  // Check if URL points to a valid image format
-  const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-  const urlLower = imageUrl.toLowerCase();
-  const hasValidExtension = validExtensions.some(ext => urlLower.includes(ext));
-  
-  if (!hasValidExtension) {
-    throw new Error(`URL does not appear to point to a supported image format: ${imageUrl}`);
-  }
-
   console.log('Request details:', {
     url: 'https://api.sightengine.com/1.0/check.json',
     method: 'GET',
