@@ -95,12 +95,6 @@ export const parseCosmeticExcelFile = async (file: File): Promise<ParsedExcelDat
                   return;
                 }
                 
-                if (!url.toLowerCase().endsWith('.jpg') && !url.toLowerCase().endsWith('.jpeg')) {
-                  invalidUrls.push(`Sheet "${sheetName}", Row ${row + 1}: Not a .jpg file - ${url}`);
-                  console.log(`parseCosmeticExcelFile: Not a .jpg file at ${cellAddress}: ${url}`);
-                  return;
-                }
-                
                 // Validate URL format
                 try {
                   new URL(url);
@@ -119,6 +113,11 @@ export const parseCosmeticExcelFile = async (file: File): Promise<ParsedExcelDat
         
         if (totalPlaceColumnsFound === 0) {
           reject(new Error('No columns with a header containing \'Place\' were found.'));
+          return;
+        }
+        
+        if (allUrls.length === 0 && invalidUrls.length === 0) {
+          reject(new Error('No image links detected in \'Place\' columns.'));
           return;
         }
         
