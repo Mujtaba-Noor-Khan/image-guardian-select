@@ -57,7 +57,6 @@ export const FlowSelector = ({ onSelectFlow }: FlowSelectorProps) => {
                   onSelectFlow('cosmetic-and-shrouds');
                 }}
                 className="w-full"
-                variant="secondary"
               >
                 Select Cosmetic
               </Button>

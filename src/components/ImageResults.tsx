@@ -88,10 +88,16 @@ export const ImageResults: React.FC<ImageResultsProps> = ({ images, onReset }) =
 
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
-              variant="outline"
-              onClick={() => setShowAllImages(!showAllImages)}
+              variant={!showAllImages ? "default" : "outline"}
+              onClick={() => setShowAllImages(false)}
             >
-              {showAllImages ? 'Show Top Quality' : 'Show All Images'}
+              Top Quality
+            </Button>
+            <Button
+              variant={showAllImages ? "default" : "outline"}
+              onClick={() => setShowAllImages(true)}
+            >
+              All Images
             </Button>
             
             <Button
